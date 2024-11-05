@@ -10,7 +10,7 @@ void readFile();
 void countTextStats();
 void displayMenu();
 void clearBuffer();
-long my_getline(char **lineptr, size_t *n, FILE *stream); // Deklaracja własnej funkcji getline
+long my_getline(char **lineptr, size_t *n, FILE *stream); // Deklaracja własnej funkcji getline()
 
 int main() {
     int choice;

@@ -1,8 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include <stdio.h> // Standard input/output definitions
+#include <stdlib.h> // Standard library definitions (malloc, free, etc.)
+#include <string.h> // String handling functions
+#include <errno.h> // Error number definitions
 
+// Function declarations
 void createFile();
 void openFile();
 void appendToFile();
@@ -10,41 +11,39 @@ void readFile();
 void countTextStats();
 void displayMenu();
 void clearBuffer();
-long my_getline(char **lineptr, size_t *n, FILE *stream); // Deklaracja własnej funkcji getline()
+long my_getline(char **lineptr, size_t *n, FILE *stream);
 
 int main() {
     int choice;
     do {
         displayMenu();
         printf("Wybierz opcje: ");
-        scanf("%d", &choice);
+        if (scanf("%d", &choice) != 1) {
+            clearBuffer();
+            printf("Niepoprawna opcja, sprobuj ponownie. \n");
+            continue;
+        }
         clearBuffer();
 
         switch (choice) {
         case 1:
             createFile();
             break;
-        
         case 2:
             openFile();
             break;
-        
         case 3:
             appendToFile();
             break;
-        
         case 4:
             readFile();
             break;
-        
         case 5:
             countTextStats();
             break;
-
         case 0:
             printf("Koniec programu. \n");
             break;
-        
         default:
             printf("Niepoprawna opcja, sprobuj ponownie. \n");
             break;
@@ -69,13 +68,14 @@ void clearBuffer() {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
-// Własna implementacja funkcji getline()
+// Custom implementation of getline()
 long my_getline(char **lineptr, size_t *n, FILE *stream) {
     if (*lineptr == NULL || *n == 0) {
-        *n = 128; // Rozpoczynamy od początkowego rozmiaru bufora
+        *n = 128; // Initial buffer size
         *lineptr = (char *)malloc(*n);
         if (*lineptr == NULL) {
-            return -1; // Błąd alokacji pamięci
+            perror("Memory allocation error");
+            return -1;
         }
     }
 
@@ -88,7 +88,8 @@ long my_getline(char **lineptr, size_t *n, FILE *stream) {
             *n *= 2;
             char *new_ptr = realloc(*lineptr, *n);
             if (new_ptr == NULL) {
-                return -1; // Błąd alokacji pamięci
+                perror("Memory allocation error");
+                return -1;
             }
             *lineptr = new_ptr;
             ptr = *lineptr + len;
@@ -103,10 +104,10 @@ long my_getline(char **lineptr, size_t *n, FILE *stream) {
     }
 
     if (len == 0) {
-        return -1; // Nic nie wczytano
+        return -1; // No characters read
     }
 
-    *ptr = '\0';
+    *ptr = '\0'; // Null-terminate the buffer
     return len;
 }
 
@@ -117,25 +118,32 @@ void createFile() {
     size_t textSize = 0;
 
     printf("Podaj nazwe pliku do utworzenia: ");
-    my_getline(&fileName, &fileNameSize, stdin);
+    if (my_getline(&fileName, &fileNameSize, stdin) == -1) {
+        perror("Error reading file name");
+        return;
+    }
     strtok(fileName, "\n");
 
     FILE *file = fopen(fileName, "w");
     if (file == NULL) {
-        printf("Blad przy tworzeniu pliku !\n");
+        perror("Error creating file");
         free(fileName);
         return;
     }
 
     printf("Podaj tekst do zapisania w pliku (maksymalnie 1000 znakow):\n");
-    my_getline(&text, &textSize, stdin);
+    if (my_getline(&text, &textSize, stdin) == -1) {
+        perror("Error reading text");
+        free(fileName);
+        fclose(file);
+        return;
+    }
 
     fprintf(file, "%s", text);
     fclose(file);
 
     printf("Plik %s zostal utworzony\n", fileName);
 
-    // Zwolnienie pamięci
     free(fileName);
     free(text);
 }
@@ -145,14 +153,17 @@ void openFile() {
     size_t fileNameSize = 0;
 
     printf("Podaj nazwe pliku do otwarcia: ");
-    my_getline(&fileName, &fileNameSize, stdin);
+    if (my_getline(&fileName, &fileNameSize, stdin) == -1) {
+        perror("Error reading file name");
+        return;
+    }
     strtok(fileName, "\n");
 
     printf("Proba otwarcia pliku %s\n", fileName);
 
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
-        printf("Plik %s nie istnieje\n", fileName);
+        perror("Error opening file");
         free(fileName);
         return;
     }
@@ -160,7 +171,6 @@ void openFile() {
     printf("Plik %s otwarty pomyslnie\n", fileName);
     fclose(file);
 
-    // Zwolnienie pamięci
     free(fileName);
 }
 
@@ -171,25 +181,32 @@ void appendToFile() {
     size_t textSize = 0;
 
     printf("Podaj nazwe pliku, ktory chcesz edytowac: ");
-    my_getline(&fileName, &fileNameSize, stdin);
+    if (my_getline(&fileName, &fileNameSize, stdin) == -1) {
+        perror("Error reading file name");
+        return;
+    }
     strtok(fileName, "\n");
 
     FILE *file = fopen(fileName, "a");
     if (file == NULL) {
-        printf("Blad przy otwieraniu pliku!\n");
+        perror("Error opening file");
         free(fileName);
         return;
     }
 
     printf("Podaj tekst ktory chcesz dopisac:\n");
-    my_getline(&text, &textSize, stdin);
+    if (my_getline(&text, &textSize, stdin) == -1) {
+        perror("Error reading text");
+        free(fileName);
+        fclose(file);
+        return;
+    }
 
     fprintf(file, "%s", text);
     fclose(file);
 
     printf("Tekst zostal dodany do pliku %s\n", fileName);
 
-    // Zwolnienie pamięci
     free(fileName);
     free(text);
 }
@@ -200,12 +217,15 @@ void readFile() {
     char ch;
 
     printf("Podaj nazwe pliku do odczytu: ");
-    my_getline(&fileName, &fileNameSize, stdin);
+    if (my_getline(&fileName, &fileNameSize, stdin) == -1) {
+        perror("Error reading file name");
+        return;
+    }
     strtok(fileName, "\n");
 
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
-        printf("Plik %s nie istnieje !\n", fileName);
+        perror("Error opening file");
         free(fileName);
         return;
     }
@@ -216,7 +236,6 @@ void readFile() {
     }
     fclose(file);
 
-    // Zwolnienie pamięci
     free(fileName);
 }
 
@@ -227,12 +246,15 @@ void countTextStats() {
     int charCount = 0, wordCount = 0, inWord = 0;
 
     printf("Podaj nazwe pliku do analizy: ");
-    my_getline(&fileName, &fileNameSize, stdin);
+    if (my_getline(&fileName, &fileNameSize, stdin) == -1) {
+        perror("Error reading file name");
+        return;
+    }
     strtok(fileName, "\n");
 
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
-        printf("Plik %s nie istnieje !\n", fileName);
+        perror("Error opening file");
         free(fileName);
         return;
     }
@@ -250,9 +272,8 @@ void countTextStats() {
     }
     if (inWord) wordCount++;
 
-    printf("Plik %s zawiera %d znakow i %d slow\n", fileName, charCount, wordCount);
+    printf("Plik %s zawiera %d znakow i %d slow/a/o\n", fileName, charCount, wordCount);
     fclose(file);
 
-    // Zwolnienie pamięci
     free(fileName);
 }
